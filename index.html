@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ECS Pronostics · Coupe du Monde 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bleu:#002395;--rouge:#ED2939;--marine:#001228;--vert:#00A65D;--fond:#f0ede8;--card:#ffffff;--texte:#111827;--muted:#6b7280;--border:rgba(0,0,0,0.1);--radius:10px;--radius-sm:6px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);min-height:100vh;padding-bottom:3rem}
+.header{background:var(--marine);position:sticky;top:0;z-index:100}
+.tribar{display:flex;height:5px}
+.tribar span{flex:1}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:1px}
+.brand-logo span{color:var(--rouge)}
+.brand-sub{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase}
+.admin-btn{font-size:12px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:5px 14px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.admin-btn.active{color:var(--rouge);border-color:rgba(237,41,57,0.4);background:rgba(237,41,57,0.1)}
+.container{max-width:560px;margin:0 auto;padding:20px 16px}
+.match-switcher{display:flex;gap:8px;margin-bottom:20px}
+.match-pill{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s}
+.match-pill.active{background:var(--bleu);border-color:var(--bleu);color:#fff}
+.match-pill-num{font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px}
+.match-pill-teams{font-size:13px;font-weight:500;display:block}
+.match-pill-date{font-size:10px;opacity:0.55;display:block;margin-top:2px}
+.match-hero{background:var(--marine);border-radius:var(--radius);padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.match-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,35,149,0.6) 0%,transparent 60%);pointer-events:none}
+.match-meta{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:16px;position:relative}
+.match-vs{display:flex;align-items:center;gap:12px;position:relative}
+.team-col{flex:1}
+.team-col.right{text-align:right}
+.flag-row{display:flex;gap:2px;height:5px;margin-bottom:6px;border-radius:2px;overflow:hidden}
+.flag-row.right{justify-content:flex-end}
+.flag-row span{flex:1}
+.team-label{font-size:18px;font-weight:500;color:#fff}
+.team-short{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px}
+.vs-badge{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);flex-shrink:0}
+.form-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:12px}
+.form-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
+.field-label{font-size:13px;color:var(--muted);margin-bottom:6px;display:block}
+.field-input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:'DM Sans',sans-serif;background:#fafafa;color:var(--texte);transition:border .15s}
+.field-input:focus{outline:none;border-color:var(--bleu);background:#fff}
+.score-group{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.score-wrap{flex:1}
+.score-box{width:100%;text-align:center;padding:14px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:28px;font-weight:500;background:#fafafa;color:var(--texte);font-family:'DM Sans',sans-serif}
+.score-box.fra{border-color:rgba(0,35,149,0.35)}
+.score-box.away{border-color:rgba(237,41,57,0.25)}
+.score-box:focus{outline:none;background:#fff}
+.score-lbl{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+.score-sep{font-size:20px;color:var(--muted);flex-shrink:0}
+.issue-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.issue-btn{padding:12px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fafafa;color:var(--muted);font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;text-align:center;transition:all .15s}
+.issue-btn.sel-v{background:#ecfdf5;border-color:#10b981;color:#065f46}
+.issue-btn.sel-n{background:#fffbeb;border-color:#f59e0b;color:#78350f}
+.issue-btn.sel-d{background:#fef2f2;border-color:#ef4444;color:#991b1b}
+.submit-btn{width:100%;padding:16px;background:var(--bleu);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s}
+.submit-btn:hover{background:#0031cc}
+.submit-btn:disabled{background:#9ca3af;cursor:not-allowed}
+.msg{display:none;border-radius:var(--radius);padding:14px;text-align:center;font-size:14px;font-weight:500;margin-top:12px}
+.msg-ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.msg-err{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
+.msg-load{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.bareme{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.bareme-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.bareme-row:last-child{border-bottom:none}
+.pts-badge{background:var(--bleu);color:#fff;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;flex-shrink:0}
+.pts-badge.bonus{background:var(--vert)}
+.admin-view{display:none}
+.section-title{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px}
+.result-match-label{font-size:13px;font-weight:500;margin-bottom:10px}
+.result-score-row{display:flex;align-items:center;gap:8px}
+.result-input{width:60px;text-align:center;padding:8px 4px;font-size:18px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fafafa;color:var(--texte);font-family:'DM Sans',sans-serif}
+.result-input:focus{outline:none;border-color:var(--bleu)}
+.calc-btn{width:100%;padding:13px;background:var(--marine);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;margin:4px 0 20px}
+.ranking-list{display:flex;flex-direction:column;gap:8px}
+.rank-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.rank-item.first{background:#fffbeb;border-color:#f59e0b}
+.rank-pos{font-size:14px;font-weight:500;color:var(--muted);width:24px;flex-shrink:0}
+.first .rank-pos{color:#b45309}
+.rank-name{font-size:15px;font-weight:500;flex:1}
+.rank-detail{font-size:11px;color:var(--muted)}
+.rank-pts{font-size:18px;font-weight:500}
+.first .rank-pts{color:#b45309}
+.pts-unit{font-size:11px;color:var(--muted);font-weight:400}
+.empty{text-align:center;padding:2rem;color:var(--muted);font-size:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.participant-count{font-size:12px;color:var(--muted);margin-bottom:12px}
+.reload-btn{font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:8px}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="tribar">
+    <span style="background:#002395"></span>
+    <span style="background:#fff"></span>
+    <span style="background:#ED2939"></span>
+  </div>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-logo">ECS <span>Score</span></div>
+      <div class="brand-sub">CdM 2026</div>
+    </div>
+    <button class="admin-btn" onclick="toggleAdmin()" id="admin-btn">Admin</button>
+  </div>
+</header>
+
+<div class="container" id="participant-view">
+  <div class="match-switcher">
+    <div class="match-pill active" onclick="selectMatch(0)" id="pill-0">
+      <span class="match-pill-num">Match 1</span>
+      <span class="match-pill-teams">FRA – SEN</span>
+      <span class="match-pill-date">16 juin</span>
+    </div>
+    <div class="match-pill" onclick="selectMatch(1)" id="pill-1">
+      <span class="match-pill-num">Match 2</span>
+      <span class="match-pill-teams">FRA – IRK</span>
+      <span class="match-pill-date">22 juin</span>
+    </div>
+    <div class="match-pill" onclick="selectMatch(2)" id="pill-2">
+      <span class="match-pill-num">Match 3</span>
+      <span class="match-pill-teams">FRA – NOR</span>
+      <span class="match-pill-date">26 juin</span>
+    </div>
+  </div>
+  <div class="match-hero" id="match-hero"></div>
+  <div class="form-card">
+    <div class="form-title">Votre identité</div>
+    <label class="field-label">Prénom et nom</label>
+    <input class="field-input" type="text" id="input-name" placeholder="Ex : Marie D." maxlength="40" autocomplete="given-name">
+  </div>
+  <div class="form-card">
+    <div class="form-title">Score prédit</div>
+    <div class="score-group">
+      <div class="score-wrap">
+        <input class="score-box fra" type="number" min="0" max="20" id="score-h" placeholder="0" oninput="autoIssue()">
+        <div class="score-lbl" id="lbl-h">France</div>
+      </div>
+      <span class="score-sep">–</span>
+      <div class="score-wrap">
+        <input class="score-box away" type="number" min="0" max="20" id="score-a" placeholder="0" oninput="autoIssue()">
+        <div class="score-lbl" id="lbl-a">Adversaire</div>
+      </div>
+    </div>
+    <label class="field-label" style="margin-top:8px">Issue du match</label>
+    <div class="issue-group">
+      <button class="issue-btn" id="ib-V" onclick="setIssue('V')">Victoire</button>
+      <button class="issue-btn" id="ib-N" onclick="setIssue('N')">Nul</button>
+      <button class="issue-btn" id="ib-D" onclick="setIssue('D')">Défaite</button>
+    </div>
+  </div>
+  <div class="form-card">
+    <div class="form-title">Buteur bonus <span style="font-size:11px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">+2 pts s'il marque</span></div>
+    <input class="field-input" type="text" id="input-bonus" placeholder="Ex : Mbappé" maxlength="40">
+  </div>
+  <button class="submit-btn" id="submit-btn" onclick="submitProno()">Enregistrer mon pronostic</button>
+  <div class="msg msg-ok" id="msg-ok">✓ Pronostic enregistré ! Bonne chance.</div>
+  <div class="msg msg-err" id="msg-err"></div>
+  <div class="msg msg-load" id="msg-load">Envoi en cours…</div>
+  <div class="bareme" style="margin-top:20px">
+    <div class="section-title" style="margin-bottom:10px">Barème</div>
+    <div class="bareme-row"><span class="pts-badge">1 pt</span> Bonne issue (victoire / nul / défaite)</div>
+    <div class="bareme-row"><span class="pts-badge">2 pts</span> Score exact d'une équipe</div>
+    <div class="bareme-row"><span class="pts-badge">5 pts</span> Score exact complet</div>
+    <div class="bareme-row"><span class="pts-badge bonus">+2 pts</span> Buteur bonus confirmé</div>
+  </div>
+</div>
+
+<div class="container admin-view" id="admin-view">
+  <div class="section-title">Résultats réels</div>
+  <div id="result-inputs"></div>
+  <button class="calc-btn" onclick="calcAndSave()">Calculer et enregistrer les points</button>
+  <div style="display:flex;align-items:center;margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:0">Classement</div>
+    <button class="reload-btn" onclick="loadRanking()">↻ Actualiser</button>
+  </div>
+  <div class="participant-count" id="participant-count"></div>
+  <div class="ranking-list" id="ranking"></div>
+</div>
+
+<script>
+const API = '/.netlify/functions/pronostic';
+const MATCHES = [
+  {id:'m1',label:'Match 1 - FRA/SEN',date:'Lundi 16 juin 2026',home:'France',away:'Sénégal',hShort:'FRA',aShort:'SEN',hFlag:['#002395','#fff','#ED2939'],aFlag:['#00853F','#FDEF42','#E31B23']},
+  {id:'m2',label:'Match 2 - FRA/IRK',date:'Lundi 22 juin 2026',home:'France',away:'Irak',hShort:'FRA',aShort:'IRK',hFlag:['#002395','#fff','#ED2939'],aFlag:['#CE1126','#fff','#007A3D']},
+  {id:'m3',label:'Match 3 - FRA/NOR',date:'Vendredi 26 juin 2026',home:'France',away:'Norvège',hShort:'FRA',aShort:'NOR',hFlag:['#002395','#fff','#ED2939'],aFlag:['#EF2B2D','#fff','#002868']}
+];
+let curMatch=0,issue='',isAdmin=false;
+
+function flag(c,r){return`<div class="flag-row${r?' right':''}">${c.map(x=>`<span style="background:${x}"></span>`).join('')}</div>`}
+
+function renderHero(){
+  const m=MATCHES[curMatch];
+  document.getElementById('match-hero').innerHTML=`
+    <div class="match-meta">Match ${curMatch+1} · Phase de groupes · Groupe D</div>
+    <div class="match-vs">
+      <div class="team-col">${flag(m.hFlag)}<div class="team-label">${m.home}</div><div class="team-short">${m.hShort}</div></div>
+      <div class="vs-badge">VS</div>
+      <div class="team-col right">${flag(m.aFlag,true)}<div class="team-label">${m.away}</div><div class="team-short">${m.aShort}</div></div>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1px">${m.date}</div>`;
+  document.getElementById('lbl-h').textContent=m.hShort;
+  document.getElementById('lbl-a').textContent=m.aShort;
+}
+
+function selectMatch(i){
+  curMatch=i;
+  [0,1,2].forEach(j=>document.getElementById('pill-'+j).classList.toggle('active',j===i));
+  issue='';['V','N','D'].forEach(x=>document.getElementById('ib-'+x).className='issue-btn');
+  document.getElementById('score-h').value='';document.getElementById('score-a').value='';
+  document.getElementById('input-bonus').value='';hideMsg();
+  document.getElementById('submit-btn').disabled=false;renderHero();
+}
+
+function autoIssue(){
+  const h=parseInt(document.getElementById('score-h').value);
+  const a=parseInt(document.getElementById('score-a').value);
+  if(!isNaN(h)&&!isNaN(a))setIssue(h>a?'V':h===a?'N':'D');
+}
+function setIssue(v){
+  issue=v;const cls={V:'sel-v',N:'sel-n',D:'sel-d'};
+  ['V','N','D'].forEach(x=>document.getElementById('ib-'+x).className='issue-btn'+(x===v?' '+cls[x]:''));
+}
+function showMsg(id,txt){
+  ['msg-ok','msg-err','msg-load'].forEach(m=>document.getElementById(m).style.display='none');
+  const el=document.getElementById(id);if(txt)el.textContent=txt;el.style.display='block';
+}
+function hideMsg(){['msg-ok','msg-err','msg-load'].forEach(m=>document.getElementById(m).style.display='none')}
+
+async function submitProno(){
+  const name=document.getElementById('input-name').value.trim();
+  const sh=document.getElementById('score-h').value;
+  const sa=document.getElementById('score-a').value;
+  const bonus=document.getElementById('input-bonus').value.trim();
+  if(!name){document.getElementById('input-name').focus();document.getElementById('input-name').style.borderColor='#ef4444';return;}
+  if(sh===''||sa==='')return;
+  document.getElementById('input-name').style.borderColor='';
+  const m=MATCHES[curMatch];
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;showMsg('msg-load');
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nom:name,match:m.label,score_france:parseInt(sh),score_adversaire:parseInt(sa),buteur_bonus:bonus||'',points:0})});
+    if(res.ok){showMsg('msg-ok');setTimeout(hideMsg,4000);}
+    else{const e=await res.json();showMsg('msg-err','Erreur : '+(e.error||res.status));btn.disabled=false;}
+  }catch(e){showMsg('msg-err','Erreur réseau : '+e.message);btn.disabled=false;}
+}
+
+function toggleAdmin(){
+  isAdmin=!isAdmin;
+  document.getElementById('participant-view').style.display=isAdmin?'none':'block';
+  document.getElementById('admin-view').style.display=isAdmin?'block':'none';
+  document.getElementById('admin-btn').classList.toggle('active',isAdmin);
+  document.getElementById('admin-btn').textContent=isAdmin?'← Retour':'Admin';
+  if(isAdmin){renderResultInputs();loadRanking();}
+}
+
+function renderResultInputs(){
+  document.getElementById('result-inputs').innerHTML=MATCHES.map((m,i)=>`
+    <div class="result-card">
+      <div class="result-match-label">Match ${i+1} · ${m.home} – ${m.away}</div>
+      <div class="result-score-row">
+        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—">
+        <span style="color:var(--muted);font-size:16px;padding:0 4px">–</span>
+        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—">
+        <span style="font-size:12px;color:var(--muted);margin-left:8px">${m.hShort} / ${m.aShort}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function loadRanking(){
+  document.getElementById('ranking').innerHTML='<div class="empty">Chargement…</div>';
+  try{
+    const res=await fetch(API+'?action=ranking');
+    const sorted=await res.json();
+    document.getElementById('participant-count').textContent=`${sorted.length} participant${sorted.length>1?'s':''}`;
+    if(!sorted.length){document.getElementById('ranking').innerHTML='<div class="empty">Aucun pronostic pour l\'instant.</div>';return;}
+    const medals=['🥇','🥈','🥉'];
+    document.getElementById('ranking').innerHTML=sorted.map((t,i)=>`
+      <div class="rank-item${i===0&&t.total>0?' first':''}">
+        <span class="rank-pos">${i<3?medals[i]:i+1}</span>
+        <div><div class="rank-name">${t.name}</div>
+        <div class="rank-detail">${Object.values(t.matches).map(m=>`${m.sh}–${m.sa}`).join(' · ')}</div></div>
+        <div style="text-align:right">
+          <div class="rank-pts">${t.total}<span class="pts-unit"> pts</span></div>
+          <div style="font-size:10px;color:var(--muted)">${Object.keys(t.matches).length} match${Object.keys(t.matches).length>1?'s':''}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){document.getElementById('ranking').innerHTML='<div class="empty">Erreur de chargement.</div>';}
+}
+
+async function calcAndSave(){
+  const results={};
+  MATCHES.forEach(m=>{
+    const rh=document.getElementById('r-h-'+m.id)?.value;
+    const ra=document.getElementById('r-a-'+m.id)?.value;
+    if(rh!==''&&ra!==''&&rh!==undefined){
+      const h=parseInt(rh),a=parseInt(ra);
+      results[m.label]={h,a,issue:h>a?'V':h===a?'N':'D'};
+    }
+  });
+  if(!Object.keys(results).length){alert('Saisis d\'abord les scores réels.');return;}
+  try{
+    const res=await fetch(API,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({results})});
+    const data=await res.json();
+    loadRanking();
+    alert(`Points calculés pour ${data.updated} pronostics !`);
+  }catch(e){alert('Erreur : '+e.message);}
+}
+selectMatch(0);
+</script>
+</body>
+</html>
