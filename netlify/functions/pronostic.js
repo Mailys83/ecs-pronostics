@@ -46,23 +46,31 @@ function calcPoints(scoreH, scoreA, realH, realA, buteur, buteurs) {
   let pts = 0;
   const pIssue = scoreH > scoreA ? 'V' : scoreH === scoreA ? 'N' : 'D';
   const rIssue = realH  > realA  ? 'V' : realH  === realA  ? 'N' : 'D';
+
+  // 1 pt bonne issue — toujours indépendant
   if (pIssue === rIssue) pts += 1;
+
+  // 5 pts score exact complet (les deux équipes)
   if (scoreH === realH && scoreA === realA) {
     pts += 5;
   } else {
+    // 2 pts par équipe exacte (si score complet raté)
     if (scoreH === realH) pts += 2;
     if (scoreA === realA) pts += 2;
   }
+
+  // +2 pts buteur bonus confirmé
   if (buteur && buteurs && buteurs.length > 0) {
     const b = normalize(buteur);
     const matched = buteurs.some(x => {
       const bx = normalize(x);
-      const bWords = b.split(/[\s,]+/).filter(w => w.length > 2);
+      const bWords  = b.split(/[\s,]+/).filter(w => w.length > 2);
       const bxWords = bx.split(/[\s,]+/).filter(w => w.length > 2);
       return bWords.some(w => bxWords.some(wx => wx.includes(w) || w.includes(wx)));
     });
     if (matched) pts += 2;
   }
+
   return pts;
 }
 
