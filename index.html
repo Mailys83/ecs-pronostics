@@ -380,24 +380,43 @@ function toggleAdmin(){
   if(isAdmin){renderResultInputs();loadRankingAdmin();}
 }
 
-function renderResultInputs(){
-  document.getElementById('result-inputs').innerHTML=MATCHES.map((m,i)=>`
-    <div class="result-card">
+async function renderResultInputs(){
+  // Charger les résultats déjà sauvegardés dans Airtable
+  let saved={};
+  try{
+    const res=await fetch(API+'?action=results');
+    const data=await res.json();
+    // Convertir label → id pour retrouver le bon match
+    MATCHES.forEach(m=>{
+      if(data[m.label]) saved[m.id]={
+        h: data[m.label].h,
+        a: data[m.label].a,
+        b: data[m.label].buteurs.join(', ')
+      };
+    });
+  }catch(e){}
+
+  document.getElementById('result-inputs').innerHTML=MATCHES.map((m,i)=>{
+    const s=saved[m.id]||{};
+    const hasData=s.h!==undefined&&s.h!=='';
+    return `<div class="result-card">
       <div class="result-match-label">
         Match ${i+1} · ${m.home} – ${m.away}
+        ${hasData?'<span class="done-tag">✓ Enregistré</span>':''}
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
         Laisse vide si ce match n'a pas encore été joué.
       </div>
       <div class="result-score-row">
-        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—">
+        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—" value="${s.h!==undefined?s.h:''}">
         <span style="color:var(--muted);font-size:16px;padding:0 4px">–</span>
-        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—">
+        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—" value="${s.a!==undefined?s.a:''}">
         <span style="font-size:12px;color:var(--muted);margin-left:8px">${m.hShort} / ${m.aShort}</span>
       </div>
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Buteurs confirmés (séparés par des virgules)</label>
-      <input class="buteur-input" type="text" id="r-b-${m.id}" placeholder="Ex : Mbappé, Barcola">
-    </div>`).join('');
+      <input class="buteur-input" type="text" id="r-b-${m.id}" placeholder="Ex : Mbappé, Barcola" value="${s.b||''}">
+    </div>`;
+  }).join('');
 }
 
 async function loadRanking(){
