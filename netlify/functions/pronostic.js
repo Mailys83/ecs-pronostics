@@ -35,6 +35,10 @@ async function fetchAll() {
   return all;
 }
 
+function normalize(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
 function calcPoints(scoreH, scoreA, realH, realA, buteur, buteurs) {
   let pts = 0;
   const pIssue = scoreH > scoreA ? 'V' : scoreH === scoreA ? 'N' : 'D';
@@ -43,25 +47,24 @@ function calcPoints(scoreH, scoreA, realH, realA, buteur, buteurs) {
   // 1 pt bonne issue
   if (pIssue === rIssue) pts += 1;
 
-  // 5 pts score exact complet
+  // 5 pts score exact complet, sinon 2 pts par équipe exacte
   if (scoreH === realH && scoreA === realA) {
     pts += 5;
   } else {
-    // 2 pts score exact d'une équipe
     if (scoreH === realH) pts += 2;
     if (scoreA === realA) pts += 2;
   }
 
   // +2 pts buteur bonus
   if (buteur && buteurs && buteurs.length > 0) {
-    const b = buteur.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const match = buteurs.some(x => {
-      const bx = x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      // Vérifie si un des mots du buteur nommé correspond à un buteur réel
-      return b.split(/\s+/).some(word => word.length > 2 && bx.includes(word)) ||
-             bx.split(/\s+/).some(word => word.length > 2 && b.includes(word));
+    const b = normalize(buteur);
+    const matched = buteurs.some(x => {
+      const bx = normalize(x);
+      const bWords = b.split(/[\s,]+/).filter(w => w.length > 2);
+      const bxWords = bx.split(/[\s,]+/).filter(w => w.length > 2);
+      return bWords.some(w => bxWords.some(wx => wx.includes(w) || w.includes(wx)));
     });
-    if (match) pts += 2;
+    if (matched) pts += 2;
   }
 
   return pts;
@@ -91,13 +94,11 @@ exports.handler = async (event) => {
 
   try {
 
-    // ── POST : enregistrer un pronostic (ou import bulk)
+    // POST — enregistrer un pronostic ou import bulk
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body);
 
       if (body.bulk) {
-        // Import bulk depuis PDF — on stocke les pronostics SANS points (0)
-        // Les points seront calculés par PATCH après saisie des résultats
         const records = body.records.map(r => ({
           fields: {
             nom: r.nom,
@@ -105,7 +106,7 @@ exports.handler = async (event) => {
             score_france: r.score_france,
             score_adversaire: r.score_adversaire,
             buteur_bonus: r.buteur_bonus || '',
-            points: 0  // toujours 0 à l'import
+            points: 0
           }
         }));
         for (let i = 0; i < records.length; i += 10) {
@@ -117,7 +118,6 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ imported: records.length }) };
       }
 
-      // Pronostic individuel
       const data = await airtableFetch(AT_URL, {
         method: 'POST',
         body: JSON.stringify({ records: [{ fields: {
@@ -132,21 +132,21 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(data) };
     }
 
-    // ── GET : classement
+    // GET — classement
     if (event.httpMethod === 'GET') {
       const all = await fetchAll();
-      const action = event.queryStringParameters?.action;
-      if (action === 'ranking') {
-        const sorted = buildRanking(all);
-        return { statusCode: 200, headers, body: JSON.stringify(sorted) };
+      if (event.queryStringParameters?.action === 'ranking') {
+        return { statusCode: 200, headers, body: JSON.stringify(buildRanking(all)) };
       }
       return { statusCode: 200, headers, body: JSON.stringify(all) };
     }
 
-    // ── PATCH : calculer les points selon résultats réels
+    // PATCH — calculer les points UNIQUEMENT pour les matchs dont le résultat est fourni
     if (event.httpMethod === 'PATCH') {
       const { results } = JSON.parse(event.body);
-      // results = { "Match 1 - FRA/SEN": { h:3, a:1, buteurs:["Mbappé","Barcola"] }, ... }
+      // results = { "Match 1 - FRA/SEN": { h:3, a:1, buteurs:["Mbappé","Barcola"] } }
+      // Seuls les matchs présents dans results sont recalculés
+      // Les autres matchs ne sont PAS touchés (leurs points restent inchangés)
 
       if (!results || !Object.keys(results).length) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Aucun résultat fourni' }) };
@@ -158,7 +158,9 @@ exports.handler = async (event) => {
       all.forEach(r => {
         const f = r.fields;
         const res = results[f.match];
-        if (!res) return; // match sans résultat saisi → on ne touche pas aux points
+
+        // Si ce match n'a pas de résultat saisi → on ne touche pas à ce record
+        if (!res) return;
 
         const pts = calcPoints(
           f.score_france,
@@ -171,7 +173,6 @@ exports.handler = async (event) => {
         updates.push({ id: r.id, fields: { points: pts } });
       });
 
-      // Mise à jour par batch de 10
       for (let i = 0; i < updates.length; i += 10) {
         const batch = updates.slice(i, i + 10);
         await airtableFetch(AT_URL, {
@@ -180,10 +181,11 @@ exports.handler = async (event) => {
         });
       }
 
-      // Retourner le classement mis à jour
       const updated = await fetchAll();
-      const ranking = buildRanking(updated);
-      return { statusCode: 200, headers, body: JSON.stringify({ updated: updates.length, ranking }) };
+      return { statusCode: 200, headers, body: JSON.stringify({
+        updated: updates.length,
+        ranking: buildRanking(updated)
+      })};
     }
 
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
