@@ -393,16 +393,18 @@ function renderResultInputs(){
     <div class="result-card">
       <div class="result-match-label">
         Match ${i+1} · ${m.home} – ${m.away}
-        ${m.done?'<span class="done-tag">Joué</span>':''}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        Laisse vide si ce match n'a pas encore été joué.
       </div>
       <div class="result-score-row">
-        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—" value="${m.done?m.scoreH:''}">
+        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—">
         <span style="color:var(--muted);font-size:16px;padding:0 4px">–</span>
-        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—" value="${m.done?m.scoreA:''}">
+        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—">
         <span style="font-size:12px;color:var(--muted);margin-left:8px">${m.hShort} / ${m.aShort}</span>
       </div>
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Buteurs confirmés (séparés par des virgules)</label>
-      <input class="buteur-input" type="text" id="r-b-${m.id}" placeholder="Ex : Mbappé, Barcola" value="${m.done&&m.buteurs?m.buteurs.slice(0,2).join(', '):''}">
+      <input class="buteur-input" type="text" id="r-b-${m.id}" placeholder="Ex : Mbappé, Barcola">
     </div>`).join('');
 }
 
@@ -472,19 +474,25 @@ async function importMatch1(){
 async function calcAndSave(){
   const results={};
   MATCHES.forEach(m=>{
-    const rh=document.getElementById('r-h-'+m.id)?.value;
-    const ra=document.getElementById('r-a-'+m.id)?.value;
-    const rb=document.getElementById('r-b-'+m.id)?.value||'';
-    if(rh!==''&&ra!==''&&rh!==undefined){
-      const h=parseInt(rh), a=parseInt(ra);
-      results[m.label]={
-        h, a,
-        issue: h>a?'V':h===a?'N':'D',
-        buteurs: rb.split(',').map(s=>s.trim()).filter(Boolean)
-      };
-    }
+    const elH=document.getElementById('r-h-'+m.id);
+    const elA=document.getElementById('r-a-'+m.id);
+    const elB=document.getElementById('r-b-'+m.id);
+    // N'inclure ce match QUE si les deux scores ont été saisis manuellement
+    const rh=(elH?.value??'').trim();
+    const ra=(elA?.value??'').trim();
+    if(rh===''||ra==='') return; // champ vide = match pas joué, on ignore
+    const h=parseInt(rh), a=parseInt(ra);
+    if(isNaN(h)||isNaN(a)) return;
+    const rb=(elB?.value||'').trim();
+    results[m.label]={
+      h, a,
+      issue: h>a?'V':h===a?'N':'D',
+      buteurs: rb.split(',').map(s=>s.trim()).filter(Boolean)
+    };
   });
-  if(!Object.keys(results).length){alert('Saisis d\'abord au moins un score réel.');return;}
+  if(!Object.keys(results).length){alert('Saisis d\'abord le score réel d\'au moins un match.');return;}
+  const matchesCalc=Object.keys(results).join(', ');
+  if(!confirm(`Calculer les points pour : ${matchesCalc} ?`)) return;
   try{
     const res=await fetch(API,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({results})});
     const data=await res.json();
