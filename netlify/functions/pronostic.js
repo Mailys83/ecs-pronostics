@@ -35,6 +35,18 @@ async function fetchAll() {
   return all;
 }
 
+function buildRanking(records) {
+  const totals = {};
+  records.forEach(r => {
+    const f = r.fields;
+    const n = f.nom || '?';
+    if (!totals[n]) totals[n] = { name: n, total: 0, matches: {} };
+    totals[n].matches[f.match] = { sh: f.score_france, sa: f.score_adversaire, pts: f.points || 0, buteur: f.buteur_bonus || '' };
+    totals[n].total += (f.points || 0);
+  });
+  return Object.values(totals).sort((a, b) => b.total - a.total);
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
@@ -43,6 +55,21 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body);
+
+      // Import bulk (depuis PDF)
+      if (body.bulk) {
+        const records = body.records.map(r => ({ fields: r }));
+        // Airtable accepte max 10 records par requête
+        for (let i = 0; i < records.length; i += 10) {
+          const batch = records.slice(i, i + 10);
+          await airtableFetch(AT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ records: batch })
+          });
+        }
+        return { statusCode: 200, headers, body: JSON.stringify({ imported: records.length }) };
+      }
+
       const data = await airtableFetch(AT_URL, {
         method: 'POST',
         body: JSON.stringify({ records: [{ fields: body }] })
@@ -52,20 +79,13 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'GET') {
       const action = event.queryStringParameters?.action;
+      const all = await fetchAll();
+
       if (action === 'ranking') {
-        const all = await fetchAll();
-        const totals = {};
-        all.forEach(r => {
-          const f = r.fields;
-          const n = f.nom || '?';
-          if (!totals[n]) totals[n] = { name: n, total: 0, matches: {} };
-          totals[n].matches[f.match] = { sh: f.score_france, sa: f.score_adversaire, pts: f.points || 0 };
-          totals[n].total += (f.points || 0);
-        });
-        const sorted = Object.values(totals).sort((a, b) => b.total - a.total);
+        const sorted = buildRanking(all);
         return { statusCode: 200, headers, body: JSON.stringify(sorted) };
       }
-      const all = await fetchAll();
+
       return { statusCode: 200, headers, body: JSON.stringify(all) };
     }
 
@@ -73,6 +93,7 @@ exports.handler = async (event) => {
       const { results } = JSON.parse(event.body);
       const all = await fetchAll();
       const updates = [];
+
       all.forEach(r => {
         const f = r.fields;
         const res = results[f.match];
@@ -82,8 +103,14 @@ exports.handler = async (event) => {
         if (pIssue === res.issue) pts += 1;
         if (f.score_france === res.h && f.score_adversaire === res.a) pts += 5;
         else { if (f.score_france === res.h) pts += 2; if (f.score_adversaire === res.a) pts += 2; }
+        // Buteur bonus
+        if (f.buteur_bonus && res.buteurs && res.buteurs.length) {
+          const b = f.buteur_bonus.toLowerCase();
+          if (res.buteurs.some(x => b.includes(x.toLowerCase()))) pts += 2;
+        }
         updates.push({ id: r.id, fields: { points: pts } });
       });
+
       for (let i = 0; i < updates.length; i += 10) {
         const batch = updates.slice(i, i + 10);
         await airtableFetch(AT_URL, {
@@ -91,7 +118,10 @@ exports.handler = async (event) => {
           body: JSON.stringify({ records: batch.map(u => ({ id: u.id, fields: u.fields })) })
         });
       }
-      return { statusCode: 200, headers, body: JSON.stringify({ updated: updates.length }) };
+
+      const updated = await fetchAll();
+      const ranking = buildRanking(updated);
+      return { statusCode: 200, headers, body: JSON.stringify({ updated: updates.length, ranking }) };
     }
 
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
