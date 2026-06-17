@@ -66,19 +66,23 @@ function calcPoints(scoreH, scoreA, realH, realA, buteur, buteurs) {
   return pts;
 }
 
-function buildRanking(records) {
+function buildRanking(records, playedMatches) {
+  // playedMatches = liste des labels de matchs dont le résultat a été saisi
   const totals = {};
   records.forEach(r => {
     const f = r.fields;
     const n = f.nom || '?';
     if (!totals[n]) totals[n] = { name: n, total: 0, matches: {} };
+    const pts = playedMatches && playedMatches.length > 0
+      ? (playedMatches.includes(f.match) ? (f.points || 0) : 0)
+      : (f.points || 0);
     totals[n].matches[f.match] = {
       sh: f.score_france,
       sa: f.score_adversaire,
-      pts: f.points || 0,
+      pts: pts,
       buteur: f.buteur_bonus || ''
     };
-    totals[n].total += (f.points || 0);
+    totals[n].total += pts;
   });
   return Object.values(totals).sort((a, b) => b.total - a.total);
 }
@@ -96,7 +100,10 @@ exports.handler = async (event) => {
 
       if (action === 'ranking') {
         const all = await fetchAll(AT_PRONOS);
-        return { statusCode: 200, headers, body: JSON.stringify(buildRanking(all)) };
+        // Récupérer les matchs dont le résultat a été saisi
+        const resultRecords = await fetchAll(AT_RESULTS);
+        const playedMatches = resultRecords.map(r => r.fields.match).filter(Boolean);
+        return { statusCode: 200, headers, body: JSON.stringify(buildRanking(all, playedMatches)) };
       }
 
       if (action === 'results') {
@@ -171,18 +178,31 @@ exports.handler = async (event) => {
         }
       }
 
-      // 3. Calculer les points uniquement pour les matchs dont le résultat est fourni
+      // 3. Récupérer TOUS les résultats sauvegardés (pas seulement ceux envoyés maintenant)
+      const allResultRecords = await fetchAll(AT_RESULTS);
+      const allResults = {};
+      allResultRecords.forEach(r => {
+        const f = r.fields;
+        if (f.match) allResults[f.match] = {
+          h: f.score_france,
+          a: f.score_adversaire,
+          buteurs: (f.buteurs || '').split(',').map(s => s.trim()).filter(Boolean)
+        };
+      });
+
+      // 4. Calculer les points pour TOUS les pronostics :
+      //    - match avec résultat → calcul normal
+      //    - match sans résultat → 0 points (remet à zéro les anciens calculs erronés)
       const allPronos = await fetchAll(AT_PRONOS);
       const updates = [];
       allPronos.forEach(r => {
         const f = r.fields;
-        const res = results[f.match];
-        if (!res) return; // match sans résultat saisi → on ne touche pas
-        const pts = calcPoints(
+        const res = allResults[f.match];
+        const pts = res ? calcPoints(
           f.score_france, f.score_adversaire,
           res.h, res.a,
           f.buteur_bonus, res.buteurs || []
-        );
+        ) : 0; // pas de résultat = 0 point
         updates.push({ id: r.id, fields: { points: pts } });
       });
 
@@ -195,9 +215,11 @@ exports.handler = async (event) => {
       }
 
       const updated = await fetchAll(AT_PRONOS);
+      const allResultRecordsAfter = await fetchAll(AT_RESULTS);
+      const playedMatchesAfter = allResultRecordsAfter.map(r => r.fields.match).filter(Boolean);
       return { statusCode: 200, headers, body: JSON.stringify({
         updated: updates.length,
-        ranking: buildRanking(updated)
+        ranking: buildRanking(updated, playedMatchesAfter)
       })};
     }
 
