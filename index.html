@@ -370,6 +370,22 @@ function showTab(t){
 }
 
 function toggleAdmin(){
+  // Si on veut entrer en mode admin, demander le mot de passe
+  if(!isAdmin){
+    // Vérifier si déjà authentifié dans cette session
+    if(sessionStorage.getItem('ecs_admin_auth')!=='1'){
+      const code=prompt('🔒 Code d\'accès Admin');
+      if(code===null) return; // annulé
+      if(code!=='1822'){
+        alert('Code incorrect.');
+        return;
+      }
+      sessionStorage.setItem('ecs_admin_auth','1');
+    }
+  } else {
+    // En sortant de l'admin, on efface l'authentification
+    sessionStorage.removeItem('ecs_admin_auth');
+  }
   isAdmin=!isAdmin;
   document.getElementById('view-admin').style.display=isAdmin?'block':'none';
   document.getElementById('nav-tabs').style.display=isAdmin?'none':'flex';
@@ -506,9 +522,15 @@ async function calcAndSave(){
   if(!confirm(`Calculer les points pour : ${matchesCalc} ?`)) return;
   try{
     const res=await fetch(API,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({results})});
-    const data=await res.json();
+    const text=await res.text();
+    let data={};
+    try{ data=JSON.parse(text); }catch(e){}
     loadRankingAdmin();
-    alert(`✓ Points calculés pour ${data.updated} pronostics !`);
+    if(res.ok){
+      alert(`✓ Points calculés ! ${data.updated||''} pronostics mis à jour.`);
+    } else {
+      alert('Erreur : '+(data.error||text));
+    }
   }catch(e){alert('Erreur : '+e.message);}
 }
 
