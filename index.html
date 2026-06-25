@@ -1,250 +1,541 @@
-const AIRTABLE_TOKEN  = process.env.AIRTABLE_TOKEN;
-const AIRTABLE_BASE   = process.env.AIRTABLE_BASE;
-const AIRTABLE_TABLE  = process.env.AIRTABLE_TABLE;          // pronostics
-const AIRTABLE_RESULTS = process.env.AIRTABLE_RESULTS;       // resultats
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ECS Pronostics · Coupe du Monde 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bleu:#002395;--rouge:#ED2939;--marine:#001228;--vert:#00A65D;--fond:#f0ede8;--card:#fff;--texte:#111827;--muted:#6b7280;--border:rgba(0,0,0,0.1);--radius:10px;--radius-sm:6px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);min-height:100vh;padding-bottom:3rem}
+.header{background:var(--marine);position:sticky;top:0;z-index:100}
+.tribar{display:flex;height:5px}.tribar span{flex:1}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+.brand-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:1px}
+.brand-logo span{color:var(--rouge)}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.admin-btn{font-size:12px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:5px 14px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.admin-btn.active{color:var(--rouge);border-color:rgba(237,41,57,0.4);background:rgba(237,41,57,0.1)}
+.nav-tabs{display:flex;background:var(--marine);border-top:1px solid rgba(255,255,255,0.06)}
+.nav-tab{flex:1;padding:10px 6px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.4);text-align:center;cursor:pointer;border-bottom:2px solid transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
+.nav-tab.active{color:#fff;border-bottom-color:var(--rouge)}
+.container{max-width:560px;margin:0 auto;padding:20px 16px}
+.view{display:none}.view.active{display:block}
+.match-switcher{display:flex;gap:8px;margin-bottom:20px}
+.match-pill{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s}
+.match-pill.active{background:var(--bleu);border-color:var(--bleu);color:#fff}
+.match-pill.done{opacity:0.6}
+.match-pill-num{font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px}
+.match-pill-teams{font-size:13px;font-weight:500;display:block}
+.match-pill-date{font-size:10px;opacity:0.55;display:block;margin-top:2px}
+.match-hero{background:var(--marine);border-radius:var(--radius);padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.match-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,35,149,0.6) 0%,transparent 60%);pointer-events:none}
+.match-meta{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:16px;position:relative}
+.match-vs{display:flex;align-items:center;gap:12px;position:relative}
+.team-col{flex:1}.team-col.right{text-align:right}
+.flag-row{display:flex;gap:2px;height:5px;margin-bottom:6px;border-radius:2px;overflow:hidden}
+.flag-row.right{justify-content:flex-end}.flag-row span{flex:1}
+.team-label{font-size:18px;font-weight:500;color:#fff}
+.team-short{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px}
+.vs-badge{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);flex-shrink:0}
+.result-banner{background:linear-gradient(135deg,#002395,#001228);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.08)}
+.result-banner-top{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:8px}
+.result-banner-score{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#fff;line-height:1;letter-spacing:2px}
+.result-banner-teams{font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px}
+.result-banner-buteurs{font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px}
+.closed-notice{background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:12px 16px;font-size:13px;color:#991b1b;text-align:center;margin-bottom:12px}
+.form-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:12px}
+.form-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px}
+.field-label{font-size:13px;color:var(--muted);margin-bottom:6px;display:block}
+.field-input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:'DM Sans',sans-serif;background:#fafafa;color:var(--texte);transition:border .15s}
+.field-input:focus{outline:none;border-color:var(--bleu);background:#fff}
+.score-group{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.score-wrap{flex:1}
+.score-box{width:100%;text-align:center;padding:14px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:28px;font-weight:500;background:#fafafa;color:var(--texte);font-family:'DM Sans',sans-serif}
+.score-box.fra{border-color:rgba(0,35,149,0.35)}.score-box.away{border-color:rgba(237,41,57,0.25)}
+.score-box:focus{outline:none;background:#fff}
+.score-lbl{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+.score-sep{font-size:20px;color:var(--muted);flex-shrink:0}
+.issue-group{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.issue-btn{padding:12px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fafafa;color:var(--muted);font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;text-align:center;transition:all .15s}
+.issue-btn.sel-v{background:#ecfdf5;border-color:#10b981;color:#065f46}
+.issue-btn.sel-n{background:#fffbeb;border-color:#f59e0b;color:#78350f}
+.issue-btn.sel-d{background:#fef2f2;border-color:#ef4444;color:#991b1b}
+.submit-btn{width:100%;padding:16px;background:var(--bleu);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s}
+.submit-btn:hover{background:#0031cc}.submit-btn:disabled{background:#9ca3af;cursor:not-allowed}
+.msg{display:none;border-radius:var(--radius);padding:14px;text-align:center;font-size:14px;font-weight:500;margin-top:12px}
+.msg-ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.msg-err{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;font-size:13px}
+.msg-load{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.bareme{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.bareme-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.bareme-row:last-child{border-bottom:none}
+.pts-badge{background:var(--bleu);color:#fff;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;flex-shrink:0;min-width:44px;text-align:center}
+.pts-badge.bonus{background:var(--vert)}
+/* CLASSEMENT */
+.section-title{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+.ranking-list{display:flex;flex-direction:column;gap:8px}
+.rank-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.rank-item.gold{background:#fffbeb;border-color:#f59e0b}
+.rank-item.silver{background:#f9fafb;border-color:#d1d5db}
+.rank-item.bronze{background:#fff7ed;border-color:#fb923c}
+.rank-pos{font-size:16px;width:28px;flex-shrink:0;text-align:center}
+.rank-name{font-size:14px;font-weight:500;flex:1}
+.rank-detail{font-size:11px;color:var(--muted);margin-top:2px}
+.rank-pts{font-size:20px;font-weight:500;text-align:right}
+.first .rank-pts,.gold .rank-pts{color:#b45309}
+.pts-unit{font-size:11px;color:var(--muted);font-weight:400}
+.match-pts-row{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+.empty{text-align:center;padding:2rem;color:var(--muted);font-size:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.rank-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.reload-btn{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif}
+.search-box{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;background:var(--card);color:var(--texte);margin-bottom:14px}
+.search-box:focus{outline:none;border-color:var(--bleu)}
+.no-points-notice{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;line-height:1.5}
+/* ADMIN */
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px}
+.result-match-label{font-size:13px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.done-tag{font-size:10px;color:var(--vert);border:1px solid var(--vert);border-radius:10px;padding:1px 8px}
+.result-score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.result-input{width:56px;text-align:center;padding:8px 4px;font-size:18px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fafafa;color:var(--texte);font-family:'DM Sans',sans-serif}
+.result-input:focus{outline:none;border-color:var(--bleu)}
+.buteur-input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;background:#fafafa;color:var(--texte)}
+.buteur-input:focus{outline:none;border-color:var(--bleu)}
+.calc-btn{width:100%;padding:13px;background:var(--bleu);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;margin:4px 0 20px}
+.calc-btn:hover{background:#0031cc}
+.import-btn{width:100%;padding:11px;background:var(--vert);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:8px}
+.import-btn:disabled{background:#9ca3af;cursor:not-allowed}
+.admin-info{background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#166534;margin-bottom:12px;line-height:1.6}
+.warn-info{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:12px;line-height:1.6}
+</style>
+</head>
+<body>
 
-const AT_PRONOS  = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`;
-const AT_RESULTS = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_RESULTS}`;
+<header class="header">
+  <div class="tribar">
+    <span style="background:#002395"></span>
+    <span style="background:#fff"></span>
+    <span style="background:#ED2939"></span>
+  </div>
+  <div class="header-inner">
+    <div>
+      <div class="brand-logo">ECS <span>Score</span></div>
+      <div class="brand-sub">CdM 2026</div>
+    </div>
+    <button class="admin-btn" onclick="toggleAdmin()" id="admin-btn">Admin</button>
+  </div>
+  <div class="nav-tabs" id="nav-tabs">
+    <div class="nav-tab active" onclick="showTab('pronostic')" id="tab-pronostic">⚽ Pronostic</div>
+    <div class="nav-tab" onclick="showTab('classement')" id="tab-classement">🏆 Classement</div>
+  </div>
+</header>
 
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
-  'Content-Type': 'application/json'
-};
+<!-- ═══ VUE PRONOSTIC ═══ -->
+<div class="container view active" id="view-pronostic">
+  <div class="match-switcher">
+    <div class="match-pill active" onclick="selectMatch(0)" id="pill-0">
+      <span class="match-pill-num">Match 1</span>
+      <span class="match-pill-teams">FRA – SEN</span>
+      <span class="match-pill-date">16 juin</span>
+    </div>
+    <div class="match-pill" onclick="selectMatch(1)" id="pill-1">
+      <span class="match-pill-num">Match 2</span>
+      <span class="match-pill-teams">FRA – IRK</span>
+      <span class="match-pill-date">22 juin</span>
+    </div>
+    <div class="match-pill" onclick="selectMatch(2)" id="pill-2">
+      <span class="match-pill-num">Match 3</span>
+      <span class="match-pill-teams">FRA – NOR</span>
+      <span class="match-pill-date">26 juin</span>
+    </div>
+  </div>
+  <div class="match-hero" id="match-hero"></div>
+  <div id="result-banner-zone"></div>
+  <div id="closed-notice-zone"></div>
+  <div class="form-card">
+    <div class="form-title">Votre identité</div>
+    <label class="field-label">Prénom et nom</label>
+    <input class="field-input" type="text" id="input-name" placeholder="Ex : Marie D." maxlength="40" autocomplete="given-name">
+  </div>
+  <div class="form-card" id="score-card">
+    <div class="form-title">Score prédit</div>
+    <div class="score-group">
+      <div class="score-wrap">
+        <input class="score-box fra" type="number" min="0" max="20" id="score-h" placeholder="0" oninput="autoIssue()">
+        <div class="score-lbl" id="lbl-h">FRA</div>
+      </div>
+      <span class="score-sep">–</span>
+      <div class="score-wrap">
+        <input class="score-box away" type="number" min="0" max="20" id="score-a" placeholder="0" oninput="autoIssue()">
+        <div class="score-lbl" id="lbl-a">ADV</div>
+      </div>
+    </div>
+    <label class="field-label" style="margin-top:8px">Issue du match</label>
+    <div class="issue-group">
+      <button class="issue-btn" id="ib-V" onclick="setIssue('V')">Victoire</button>
+      <button class="issue-btn" id="ib-N" onclick="setIssue('N')">Nul</button>
+      <button class="issue-btn" id="ib-D" onclick="setIssue('D')">Défaite</button>
+    </div>
+  </div>
+  <div class="form-card">
+    <div class="form-title">Buteur bonus <span style="font-size:11px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">+2 pts s'il marque</span></div>
+    <input class="field-input" type="text" id="input-bonus" placeholder="Ex : Mbappé" maxlength="40">
+  </div>
+  <button class="submit-btn" id="submit-btn" onclick="submitProno()">Enregistrer mon pronostic</button>
+  <div class="msg msg-ok" id="msg-ok">✓ Pronostic enregistré ! Bonne chance.</div>
+  <div class="msg msg-err" id="msg-err"></div>
+  <div class="msg msg-load" id="msg-load">Envoi en cours…</div>
+  <div class="bareme" style="margin-top:20px">
+    <div class="section-title" style="margin-bottom:10px">Barème des points</div>
+    <div class="bareme-row"><span class="pts-badge">1 pt</span> Bonne issue (victoire / nul / défaite)</div>
+    <div class="bareme-row"><span class="pts-badge">2 pts</span> Score exact d'une équipe</div>
+    <div class="bareme-row"><span class="pts-badge">5 pts</span> Score exact complet (les deux équipes)</div>
+    <div class="bareme-row"><span class="pts-badge bonus">+2 pts</span> Buteur bonus confirmé</div>
+  </div>
+</div>
 
-async function airtableFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'Airtable error');
-  return data;
-}
+<!-- ═══ VUE CLASSEMENT ═══ -->
+<div class="container view" id="view-classement">
+  <input class="search-box" type="text" id="search-input" placeholder="🔍 Rechercher un participant…" oninput="filterRanking()">
+  <div id="no-points-notice" style="display:none" class="no-points-notice">
+    ⏳ Les points du Match 1 seront affichés une fois les résultats saisis par l'admin.
+  </div>
+  <div class="rank-header">
+    <span class="section-title" style="margin-bottom:0" id="participant-count">Chargement…</span>
+    <button class="reload-btn" onclick="loadRanking()">↻ Actualiser</button>
+  </div>
+  <div class="ranking-list" id="ranking"></div>
+</div>
 
-async function fetchAll(url) {
-  let all = [], offset = null;
-  do {
-    const u = url + '?pageSize=100' + (offset ? '&offset=' + offset : '');
-    const data = await airtableFetch(u);
-    all = [...all, ...(data.records || [])];
-    offset = data.offset || null;
-  } while (offset);
-  return all;
-}
+<!-- ═══ VUE ADMIN ═══ -->
+<div class="container view" id="view-admin" style="display:none">
 
-function normalize(s) {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-}
+  <div class="section-title">Résultats réels des matchs</div>
+  <div class="warn-info">
+    Saisis le score réel et les buteurs de chaque match joué, puis clique <strong>"Calculer les points"</strong>.<br>
+    Les points ne s'affichent dans le classement qu'après ce calcul.
+  </div>
+  <div id="result-inputs"></div>
+  <button class="calc-btn" onclick="calcAndSave()">Calculer les points de tous les matchs</button>
 
-function calcPoints(scoreH, scoreA, realH, realA, buteur, buteurs) {
-  let pts = 0;
-  const pIssue = scoreH > scoreA ? 'V' : scoreH === scoreA ? 'N' : 'D';
-  const rIssue = realH  > realA  ? 'V' : realH  === realA  ? 'N' : 'D';
+  <div class="rank-header">
+    <span class="section-title" style="margin-bottom:0">Classement</span>
+    <button class="reload-btn" onclick="loadRankingAdmin()">↻ Actualiser</button>
+  </div>
+  <div class="ranking-list" id="ranking-admin"></div>
+</div>
 
-  // 1 pt bonne issue — toujours indépendant
-  if (pIssue === rIssue) pts += 1;
+<script>
+const API = '/.netlify/functions/pronostic';
 
-  // 5 pts score exact complet (les deux équipes)
-  if (scoreH === realH && scoreA === realA) {
-    pts += 5;
+const MATCHES = [
+  {id:'m1', label:'Match 1 - FRA/SEN', date:'Lundi 16 juin 2026',   home:'France', away:'Sénégal', hShort:'FRA', aShort:'SEN', hFlag:['#002395','#fff','#ED2939'], aFlag:['#00853F','#FDEF42','#E31B23'], done:true,  scoreH:3, scoreA:1, buteurs:['Mbappé','Barcola','Kylian Mbappé','Bradley Barcola']},
+  {id:'m2', label:'Match 2 - FRA/IRK', date:'Lundi 22 juin 2026',   home:'France', away:'Irak',    hShort:'FRA', aShort:'IRK', hFlag:['#002395','#fff','#ED2939'], aFlag:['#CE1126','#fff','#007A3D'],     done:true,  scoreH:3, scoreA:0, buteurs:['Mbappé','Dembélé','Kylian Mbappé','Ousmane Dembélé']},
+  {id:'m3', label:'Match 3 - FRA/NOR', date:'Vendredi 26 juin 2026',home:'France', away:'Norvège', hShort:'FRA', aShort:'NOR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#EF2B2D','#fff','#002868'],     done:false}
+];
+
+// Pronostics Match 1 issus du PDF — points à 0, calculés par la fonction après saisie résultat
+const MATCH1_DATA = [
+  {nom:'Mkhenini souhayel',    match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Alexandre kattoua',    match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:1, buteur_bonus:'Olise',                  points:0},
+  {nom:'Axel Bourianne',       match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:1, buteur_bonus:'Olise',                  points:0},
+  {nom:'Nicolas ESTEVES',      match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:1, buteur_bonus:'',                       points:0},
+  {nom:'Shaun PELLISSIER',     match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Marine C.',            match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Tom Serra',            match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:0, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Manu',                 match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Emilie',               match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Alimou DRAME',         match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:0, buteur_bonus:'Mbappe',                 points:0},
+  {nom:'Mustapha SAIHI',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Doué et Mbappe',         points:0},
+  {nom:'Anais',                match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Cherki Mbappé Gueye',    points:0},
+  {nom:'Jean Marc',            match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappe',                 points:0},
+  {nom:'Vincent F',            match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mpabbé',                 points:0},
+  {nom:'Chokri Fersi',         match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Mbappe',                 points:0},
+  {nom:'Gilles Albertini',     match:'Match 1 - FRA/SEN', score_france:4, score_adversaire:1, buteur_bonus:'Kilian Mbappé',          points:0},
+  {nom:'Nicolas COSTAGUTTA',   match:'Match 1 - FRA/SEN', score_france:1, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Pascal PITASSI',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'OLISE',                  points:0},
+  {nom:'Jonas FUSBERTI',       match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:0, buteur_bonus:'Olisé',                  points:0},
+  {nom:'Thierry',              match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Dembele',                points:0},
+  {nom:'Franck GUILBERT',      match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:0, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'David',                match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Jean-Pierre',            points:0},
+  {nom:'Youssef kenadi',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'',                       points:0},
+  {nom:'Stephanie roncagliolo',match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Olisé',                  points:0},
+  {nom:'Thibault M',           match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Olisé',                  points:0},
+  {nom:'mailys hoffmann',      match:'Match 1 - FRA/SEN', score_france:5, score_adversaire:2, buteur_bonus:'mbappé',                 points:0},
+  {nom:'Christophe Crespin',   match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:0, buteur_bonus:'Mbappé',                 points:0},
+  {nom:'Philippe Giacometti',  match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Olise',                  points:0},
+  {nom:'Pieric Jacquet',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'OLISE',                  points:0},
+  {nom:'delphine H',           match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'',                       points:0},
+  {nom:'Veronique Grancourt',  match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'',                       points:0},
+  {nom:'Baptiste Grehl',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'Michael Olise',          points:0},
+  {nom:'Nathanael',            match:'Match 1 - FRA/SEN', score_france:4, score_adversaire:2, buteur_bonus:'Doué',                   points:0},
+  {nom:'Amandine Gaubert',     match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:0, buteur_bonus:'Thuram',                 points:0},
+  {nom:'Jb Taillard',          match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:2, buteur_bonus:'Olisé',                  points:0},
+  {nom:'Mustapha SAIHI',       match:'Match 1 - FRA/SEN', score_france:2, score_adversaire:1, buteur_bonus:'',                       points:0},
+];
+
+let curMatch=0, issue='', isAdmin=false, allRanking=[];
+
+function flag(c,r){return`<div class="flag-row${r?' right':''}">${c.map(x=>`<span style="background:${x}"></span>`).join('')}</div>`}
+
+function renderHero(){
+  const m=MATCHES[curMatch];
+  document.getElementById('match-hero').innerHTML=`
+    <div class="match-meta">Match ${curMatch+1} · Phase de groupes · Groupe D</div>
+    <div class="match-vs">
+      <div class="team-col">${flag(m.hFlag)}<div class="team-label">${m.home}</div><div class="team-short">${m.hShort}</div></div>
+      <div class="vs-badge">VS</div>
+      <div class="team-col right">${flag(m.aFlag,true)}<div class="team-label">${m.away}</div><div class="team-short">${m.aShort}</div></div>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1px">${m.date}</div>`;
+  document.getElementById('lbl-h').textContent=m.hShort;
+  document.getElementById('lbl-a').textContent=m.aShort;
+
+  const rb=document.getElementById('result-banner-zone');
+  const cn=document.getElementById('closed-notice-zone');
+  const btn=document.getElementById('submit-btn');
+  const sc=document.getElementById('score-card');
+
+  if(m.done){
+    rb.innerHTML=`<div class="result-banner">
+      <div class="result-banner-top">Résultat officiel</div>
+      <div class="result-banner-score">${m.scoreH} – ${m.scoreA}</div>
+      <div class="result-banner-teams">France vs ${m.away}</div>
+      <div class="result-banner-buteurs">⚽ Buteurs : ${m.buteurs.slice(0,2).join(', ')}</div>
+    </div>`;
+    cn.innerHTML='<div class="closed-notice">🔒 Les pronostics pour ce match sont fermés.</div>';
+    sc.style.display='none';
+    btn.textContent='Match terminé';
+    btn.disabled=true;
   } else {
-    // 2 pts par équipe exacte (si score complet raté)
-    if (scoreH === realH) pts += 2;
-    if (scoreA === realA) pts += 2;
+    rb.innerHTML=''; cn.innerHTML='';
+    sc.style.display='block';
+    btn.textContent='Enregistrer mon pronostic';
+    btn.disabled=false;
   }
-
-  // +2 pts buteur bonus confirmé
-  if (buteur && buteurs && buteurs.length > 0) {
-    const b = normalize(buteur);
-    const matched = buteurs.some(x => {
-      const bx = normalize(x);
-      const bWords  = b.split(/[\s,]+/).filter(w => w.length > 2);
-      const bxWords = bx.split(/[\s,]+/).filter(w => w.length > 2);
-      return bWords.some(w => bxWords.some(wx => wx.includes(w) || w.includes(wx)));
-    });
-    if (matched) pts += 2;
-  }
-
-  return pts;
 }
 
-function buildRanking(records, playedMatches) {
-  // playedMatches = liste des labels de matchs dont le résultat a été saisi
-  const totals = {};
-  records.forEach(r => {
-    const f = r.fields;
-    const n = f.nom || '?';
-    if (!totals[n]) totals[n] = { name: n, total: 0, matches: {} };
-    const pts = playedMatches && playedMatches.length > 0
-      ? (playedMatches.includes(f.match) ? (f.points || 0) : 0)
-      : (f.points || 0);
-    totals[n].matches[f.match] = {
-      sh: f.score_france,
-      sa: f.score_adversaire,
-      pts: pts,
-      buteur: f.buteur_bonus || ''
-    };
-    totals[n].total += pts;
+function selectMatch(i){
+  curMatch=i;
+  [0,1,2].forEach(j=>document.getElementById('pill-'+j).classList.toggle('active',j===i));
+  issue='';['V','N','D'].forEach(x=>document.getElementById('ib-'+x).className='issue-btn');
+  document.getElementById('score-h').value='';
+  document.getElementById('score-a').value='';
+  document.getElementById('input-bonus').value='';
+  hideMsg(); renderHero();
+}
+
+function autoIssue(){
+  const h=parseInt(document.getElementById('score-h').value);
+  const a=parseInt(document.getElementById('score-a').value);
+  if(!isNaN(h)&&!isNaN(a)) setIssue(h>a?'V':h===a?'N':'D');
+}
+function setIssue(v){
+  issue=v;
+  const cls={V:'sel-v',N:'sel-n',D:'sel-d'};
+  ['V','N','D'].forEach(x=>document.getElementById('ib-'+x).className='issue-btn'+(x===v?' '+cls[x]:''));
+}
+function showMsg(id,txt){
+  ['msg-ok','msg-err','msg-load'].forEach(m=>document.getElementById(m).style.display='none');
+  const el=document.getElementById(id); if(txt) el.textContent=txt; el.style.display='block';
+}
+function hideMsg(){['msg-ok','msg-err','msg-load'].forEach(m=>document.getElementById(m).style.display='none')}
+
+async function submitProno(){
+  const name=document.getElementById('input-name').value.trim();
+  const sh=document.getElementById('score-h').value;
+  const sa=document.getElementById('score-a').value;
+  const bonus=document.getElementById('input-bonus').value.trim();
+  if(!name){document.getElementById('input-name').style.borderColor='#ef4444';document.getElementById('input-name').focus();return;}
+  if(sh===''||sa==='') return;
+  document.getElementById('input-name').style.borderColor='';
+  const m=MATCHES[curMatch];
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true; showMsg('msg-load');
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nom:name,match:m.label,score_france:parseInt(sh),score_adversaire:parseInt(sa),buteur_bonus:bonus||'',points:0})});
+    if(res.ok){showMsg('msg-ok');setTimeout(hideMsg,4000);}
+    else{const e=await res.json();showMsg('msg-err','Erreur : '+(e.error||res.status));btn.disabled=false;}
+  }catch(e){showMsg('msg-err','Erreur : '+e.message);btn.disabled=false;}
+}
+
+function showTab(t){
+  ['pronostic','classement'].forEach(id=>{
+    document.getElementById('view-'+id).classList.toggle('active',id===t);
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
-  return Object.values(totals).sort((a, b) => b.total - a.total);
+  if(t==='classement') loadRanking();
 }
 
-exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+function toggleAdmin(){
+  // Si on veut entrer en mode admin, demander le mot de passe
+  if(!isAdmin){
+    // Vérifier si déjà authentifié dans cette session
+    if(sessionStorage.getItem('ecs_admin_auth')!=='1'){
+      const code=prompt('🔒 Code d\'accès Admin');
+      if(code===null) return; // annulé
+      if(code!=='1822'){
+        alert('Code incorrect.');
+        return;
+      }
+      sessionStorage.setItem('ecs_admin_auth','1');
+    }
+  } else {
+    // En sortant de l'admin, on efface l'authentification
+    sessionStorage.removeItem('ecs_admin_auth');
   }
+  isAdmin=!isAdmin;
+  document.getElementById('view-admin').style.display=isAdmin?'block':'none';
+  document.getElementById('nav-tabs').style.display=isAdmin?'none':'flex';
+  ['view-pronostic','view-classement'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(!isAdmin) showTab('pronostic');
+  document.getElementById('admin-btn').classList.toggle('active',isAdmin);
+  document.getElementById('admin-btn').textContent=isAdmin?'← Retour':'Admin';
+  if(isAdmin){renderResultInputs();loadRankingAdmin();}
+}
 
-  try {
+async function renderResultInputs(){
+  // Charger les résultats déjà sauvegardés dans Airtable
+  let saved={};
+  try{
+    const res=await fetch(API+'?action=results');
+    const data=await res.json();
+    // Convertir label → id pour retrouver le bon match
+    MATCHES.forEach(m=>{
+      if(data[m.label]) saved[m.id]={
+        h: data[m.label].h,
+        a: data[m.label].a,
+        b: data[m.label].buteurs.join(', ')
+      };
+    });
+  }catch(e){}
 
-    // ── GET : classement ou résultats sauvegardés
-    if (event.httpMethod === 'GET') {
-      const action = event.queryStringParameters?.action;
+  document.getElementById('result-inputs').innerHTML=MATCHES.map((m,i)=>{
+    const s=saved[m.id]||{};
+    const hasData=s.h!==undefined&&s.h!=='';
+    return `<div class="result-card">
+      <div class="result-match-label">
+        Match ${i+1} · ${m.home} – ${m.away}
+        ${hasData?'<span class="done-tag">✓ Enregistré</span>':''}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        Laisse vide si ce match n'a pas encore été joué.
+      </div>
+      <div class="result-score-row">
+        <input class="result-input" type="number" min="0" max="20" id="r-h-${m.id}" placeholder="—" value="${s.h!==undefined?s.h:''}">
+        <span style="color:var(--muted);font-size:16px;padding:0 4px">–</span>
+        <input class="result-input" type="number" min="0" max="20" id="r-a-${m.id}" placeholder="—" value="${s.a!==undefined?s.a:''}">
+        <span style="font-size:12px;color:var(--muted);margin-left:8px">${m.hShort} / ${m.aShort}</span>
+      </div>
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">Buteurs confirmés (séparés par des virgules)</label>
+      <input class="buteur-input" type="text" id="r-b-${m.id}" placeholder="Ex : Mbappé, Barcola" value="${s.b||''}">
+    </div>`;
+  }).join('');
+}
 
-      if (action === 'ranking') {
-        const all = await fetchAll(AT_PRONOS);
-        // Récupérer les matchs dont le résultat a été saisi
-        const resultRecords = await fetchAll(AT_RESULTS);
-        const playedMatches = resultRecords.map(r => r.fields.match).filter(Boolean);
-        return { statusCode: 200, headers, body: JSON.stringify(buildRanking(all, playedMatches)) };
-      }
+async function loadRanking(){
+  document.getElementById('ranking').innerHTML='<div class="empty">Chargement…</div>';
+  try{
+    const res=await fetch(API+'?action=ranking');
+    allRanking=await res.json();
+    const hasPoints=allRanking.some(t=>t.total>0);
+    document.getElementById('no-points-notice').style.display=hasPoints?'none':'block';
+    document.getElementById('participant-count').textContent=`${allRanking.length} participant${allRanking.length>1?'s':''}`;
+    renderRankingList(allRanking,'ranking');
+  }catch(e){document.getElementById('ranking').innerHTML='<div class="empty">Erreur de chargement.</div>';}
+}
 
-      if (action === 'results') {
-        // Récupère les résultats sauvegardés pour les afficher dans l'Admin
-        const all = await fetchAll(AT_RESULTS);
-        const results = {};
-        all.forEach(r => {
-          const f = r.fields;
-          if (f.match) results[f.match] = {
-            h: f.score_france,
-            a: f.score_adversaire,
-            buteurs: (f.buteurs || '').split(',').map(s => s.trim()).filter(Boolean),
-            recordId: r.id
-          };
-        });
-        return { statusCode: 200, headers, body: JSON.stringify(results) };
-      }
+async function loadRankingAdmin(){
+  try{
+    const res=await fetch(API+'?action=ranking');
+    const sorted=await res.json();
+    renderRankingList(sorted,'ranking-admin');
+  }catch(e){}
+}
 
-      const all = await fetchAll(AT_PRONOS);
-      return { statusCode: 200, headers, body: JSON.stringify(all) };
+function renderRankingList(sorted, containerId){
+  if(!sorted.length){document.getElementById(containerId).innerHTML='<div class="empty">Aucun pronostic enregistré.</div>';return;}
+  const cls=['gold','silver','bronze'];
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById(containerId).innerHTML=sorted.map((t,i)=>{
+    const detail=MATCHES.map(m=>t.matches[m.label]?`${t.matches[m.label].sh}–${t.matches[m.label].sa}`:'—').join(' · ');
+    const mpts=MATCHES.map(m=>t.matches[m.label]?`M${MATCHES.indexOf(m)+1}: ${t.matches[m.label].pts}pt`:'').filter(Boolean).join(' · ');
+    return `<div class="rank-item${i<3?' '+cls[i]:''}">
+      <span class="rank-pos">${i<3?medals[i]:i+1}</span>
+      <div style="flex:1">
+        <div class="rank-name">${t.name}</div>
+        <div class="rank-detail">${detail}</div>
+      </div>
+      <div>
+        <div class="rank-pts">${t.total}<span class="pts-unit"> pts</span></div>
+        ${mpts?`<div class="match-pts-row">${mpts}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterRanking(){
+  const q=document.getElementById('search-input').value.toLowerCase().trim();
+  if(!q){renderRankingList(allRanking,'ranking');return;}
+  renderRankingList(allRanking.filter(t=>t.name.toLowerCase().includes(q)),'ranking');
+}
+
+async function importMatch1(){
+  const btn=document.getElementById('import-btn');
+  btn.disabled=true; btn.textContent='Import en cours…';
+  try{
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bulk:true,records:MATCH1_DATA})});
+    if(res.ok){
+      document.getElementById('import-ok').style.display='block';
+      btn.textContent='✓ Importé — lance le calcul des points ci-dessous';
+      loadRankingAdmin();
+    } else {
+      btn.disabled=false; btn.textContent='⬆ Importer les pronostics Match 1';
     }
+  }catch(e){btn.disabled=false;btn.textContent='⬆ Importer les pronostics Match 1';alert('Erreur : '+e.message);}
+}
 
-    // ── POST : enregistrer un pronostic
-    if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body);
-      // Date et heure de soumission au format français
-      const now = new Date();
-      const dateStr = now.toLocaleString('fr-FR', {
-        timeZone: 'Europe/Paris',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      const data = await airtableFetch(AT_PRONOS, {
-        method: 'POST',
-        body: JSON.stringify({ records: [{ fields: {
-          nom: body.nom,
-          match: body.match,
-          score_france: body.score_france,
-          score_adversaire: body.score_adversaire,
-          buteur_bonus: body.buteur_bonus || '',
-          points: 0,
-          date_pronostic: dateStr
-        }}]})
-      });
-      return { statusCode: 200, headers, body: JSON.stringify(data) };
+async function calcAndSave(){
+  const results={};
+  MATCHES.forEach(m=>{
+    const elH=document.getElementById('r-h-'+m.id);
+    const elA=document.getElementById('r-a-'+m.id);
+    const elB=document.getElementById('r-b-'+m.id);
+    // N'inclure ce match QUE si les deux scores ont été saisis manuellement
+    const rh=(elH?.value??'').trim();
+    const ra=(elA?.value??'').trim();
+    if(rh===''||ra==='') return; // champ vide = match pas joué, on ignore
+    const h=parseInt(rh), a=parseInt(ra);
+    if(isNaN(h)||isNaN(a)) return;
+    const rb=(elB?.value||'').trim();
+    results[m.label]={
+      h, a,
+      issue: h>a?'V':h===a?'N':'D',
+      buteurs: rb.split(',').map(s=>s.trim()).filter(Boolean)
+    };
+  });
+  if(!Object.keys(results).length){alert('Saisis d\'abord le score réel d\'au moins un match.');return;}
+  const matchesCalc=Object.keys(results).join(', ');
+  if(!confirm(`Calculer les points pour : ${matchesCalc} ?`)) return;
+  try{
+    const res=await fetch(API,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({results})});
+    const text=await res.text();
+    let data={};
+    try{ data=JSON.parse(text); }catch(e){}
+    loadRankingAdmin();
+    if(res.ok){
+      alert(`✓ Points calculés ! ${data.updated||''} pronostics mis à jour.`);
+    } else {
+      alert('Erreur : '+(data.error||text));
     }
+  }catch(e){alert('Erreur : '+e.message);}
+}
 
-    // ── PATCH : sauvegarder résultats + calculer points
-    if (event.httpMethod === 'PATCH') {
-      const { results } = JSON.parse(event.body);
-      if (!results || !Object.keys(results).length) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Aucun résultat fourni' }) };
-      }
-
-      // 1. Récupérer les résultats déjà sauvegardés
-      const existingRecords = await fetchAll(AT_RESULTS);
-      const existingByMatch = {};
-      existingRecords.forEach(r => { existingByMatch[r.fields.match] = r.id; });
-
-      // 2. Sauvegarder/mettre à jour chaque résultat dans la table resultats
-      for (const [matchLabel, res] of Object.entries(results)) {
-        const fields = {
-          match: matchLabel,
-          score_france: res.h,
-          score_adversaire: res.a,
-          buteurs: res.buteurs.join(', ')
-        };
-        if (existingByMatch[matchLabel]) {
-          // Mise à jour
-          await airtableFetch(AT_RESULTS, {
-            method: 'PATCH',
-            body: JSON.stringify({ records: [{ id: existingByMatch[matchLabel], fields }] })
-          });
-        } else {
-          // Création
-          await airtableFetch(AT_RESULTS, {
-            method: 'POST',
-            body: JSON.stringify({ records: [{ fields }] })
-          });
-        }
-      }
-
-      // 3. Récupérer TOUS les résultats sauvegardés (pas seulement ceux envoyés maintenant)
-      const allResultRecords = await fetchAll(AT_RESULTS);
-      const allResults = {};
-      allResultRecords.forEach(r => {
-        const f = r.fields;
-        if (f.match) allResults[f.match] = {
-          h: f.score_france,
-          a: f.score_adversaire,
-          buteurs: (f.buteurs || '').split(',').map(s => s.trim()).filter(Boolean)
-        };
-      });
-
-      // 4. Calculer les points pour TOUS les pronostics :
-      //    - match avec résultat → calcul normal
-      //    - match sans résultat → 0 points (remet à zéro les anciens calculs erronés)
-      const allPronos = await fetchAll(AT_PRONOS);
-      const updates = [];
-      allPronos.forEach(r => {
-        const f = r.fields;
-        const res = allResults[f.match];
-        const pts = res ? calcPoints(
-          f.score_france, f.score_adversaire,
-          res.h, res.a,
-          f.buteur_bonus, res.buteurs || []
-        ) : 0; // pas de résultat = 0 point
-        updates.push({ id: r.id, fields: { points: pts } });
-      });
-
-      for (let i = 0; i < updates.length; i += 10) {
-        const batch = updates.slice(i, i + 10);
-        await airtableFetch(AT_PRONOS, {
-          method: 'PATCH',
-          body: JSON.stringify({ records: batch.map(u => ({ id: u.id, fields: u.fields })) })
-        });
-      }
-
-      const updated = await fetchAll(AT_PRONOS);
-      const allResultRecordsAfter = await fetchAll(AT_RESULTS);
-      const playedMatchesAfter = allResultRecordsAfter.map(r => r.fields.match).filter(Boolean);
-      return { statusCode: 200, headers, body: JSON.stringify({
-        updated: updates.length,
-        ranking: buildRanking(updated, playedMatchesAfter)
-      })};
-    }
-
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
-
-  } catch (e) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
-  }
-};
+selectMatch(0);
+loadRanking();
+</script>
+</body>
+</html>
