@@ -159,6 +159,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);
       <span class="match-pill-teams">FRA – PAR</span>
       <span class="match-pill-date">4 juillet</span>
     </div>
+    <div class="match-pill" onclick="selectMatch(5)" id="pill-5">
+      <span class="match-pill-num">¼ Finale</span>
+      <span class="match-pill-teams">FRA – MAR</span>
+      <span class="match-pill-date">9 juillet</span>
+    </div>
   </div>
   <div class="match-hero" id="match-hero"></div>
   <div id="result-banner-zone"></div>
@@ -244,7 +249,8 @@ const MATCHES = [
   {id:'m2', label:'Match 2 - FRA/IRK', date:'Lundi 22 juin 2026',   home:'France', away:'Irak',    hShort:'FRA', aShort:'IRK', hFlag:['#002395','#fff','#ED2939'], aFlag:['#CE1126','#fff','#007A3D'],     done:true,  scoreH:3, scoreA:0, buteurs:['Mbappé','Dembélé','Kylian Mbappé','Ousmane Dembélé']},
   {id:'m3', label:'Match 3 - FRA/NOR', date:'Vendredi 26 juin 2026',home:'France', away:'Norvège', hShort:'FRA', aShort:'NOR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#EF2B2D','#fff','#002868'],     done:true,  scoreH:4, scoreA:1, buteurs:['Dembélé','Doué','Ousmane Dembélé','Désiré Doué']},
   {id:'m4', label:'Match 4 - FRA/SUE', date:'Mardi 30 juin 2026 · 23h00', home:'France', away:'Suède', hShort:'FRA', aShort:'SUE', hFlag:['#002395','#fff','#ED2939'], aFlag:['#006AA7','#FECC00','#006AA7'], done:true, scoreH:3, scoreA:0, buteurs:['Mbappé','Barcola','Kylian Mbappé','Bradley Barcola']},
-  {id:'m5', label:'Match 5 - FRA/PAR', date:'Samedi 4 juillet 2026 · 23h00', home:'France', away:'Paraguay', hShort:'FRA', aShort:'PAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#D52B1E','#fff','#0038A8'], done:false}
+  {id:'m5', label:'Match 5 - FRA/PAR', date:'Samedi 4 juillet 2026 · 23h00', home:'France', away:'Paraguay', hShort:'FRA', aShort:'PAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#D52B1E','#fff','#0038A8'], done:true, scoreH:1, scoreA:0, buteurs:['Mbappé','Kylian Mbappé']},
+  {id:'m6', label:'Match 6 - FRA/MAR', date:'Jeudi 9 juillet 2026 · 22h00', home:'France', away:'Maroc', hShort:'FRA', aShort:'MAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#C1272D','#006233','#C1272D'], done:false, phase:'Quart de finale'}
 ];
 
 // Pronostics Match 1 issus du PDF — points à 0, calculés par la fonction après saisie résultat
@@ -294,7 +300,7 @@ function flag(c,r){return`<div class="flag-row${r?' right':''}">${c.map(x=>`<spa
 function renderHero(){
   const m=MATCHES[curMatch];
   document.getElementById('match-hero').innerHTML=`
-    <div class="match-meta">Match ${curMatch+1} · Phase de groupes · Groupe D</div>
+    <div class="match-meta">Match ${curMatch+1} · ${m.phase||'Phase de groupes · Groupe D'}</div>
     <div class="match-vs">
       <div class="team-col">${flag(m.hFlag)}<div class="team-label">${m.home}</div><div class="team-short">${m.hShort}</div></div>
       <div class="vs-badge">VS</div>
