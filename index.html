@@ -26,6 +26,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);
 .match-pill{flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s}
 .match-pill.active{background:var(--bleu);border-color:var(--bleu);color:#fff}
 .match-pill.done{opacity:0.6}
+.match-pill.neutral-match{background:#f5f5f5;border-color:#d1d5db;color:#6b7280}
+.match-pill.neutral-match.active{background:#6b7280;border-color:#6b7280;color:#fff}
+.match-pill.neutral-match .match-pill-num{color:#9ca3af}
 .match-pill-num{font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px}
 .match-pill-teams{font-size:13px;font-weight:500;display:block}
 .match-pill-date{font-size:10px;opacity:0.55;display:block;margin-top:2px}
@@ -222,10 +225,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);
       <span class="match-pill-teams">FRA – ESP</span>
       <span class="match-pill-date">14 juillet</span>
     </div>
-    <div class="match-pill" onclick="selectMatch(7)" id="pill-7">
+   <div class="match-pill neutral-match" onclick="selectMatch(7)" id="pill-7">
       <span class="match-pill-num">½ Finale</span>
       <span class="match-pill-teams">ENG – ARG</span>
       <span class="match-pill-date">15 juillet</span>
+    </div>
+    <div class="match-pill" onclick="selectMatch(8)" id="pill-8">
+      <span class="match-pill-num">3e place</span>
+      <span class="match-pill-teams">FRA – ?</span>
+      <span class="match-pill-date">à venir</span>
     </div>
   </div>
   <div class="match-hero" id="match-hero"></div>
@@ -315,8 +323,8 @@ const MATCHES = [
   {id:'m5', label:'Match 5 - FRA/PAR', date:'Samedi 4 juillet 2026 · 23h00', home:'France', away:'Paraguay', hShort:'FRA', aShort:'PAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#D52B1E','#fff','#0038A8'], done:true, scoreH:1, scoreA:0, buteurs:['Mbappé','Kylian Mbappé']},
   {id:'m6', label:'Match 6 - FRA/MAR', date:'Jeudi 9 juillet 2026 · 22h00', home:'France', away:'Maroc', hShort:'FRA', aShort:'MAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#C1272D','#006233','#C1272D'], done:true, scoreH:2, scoreA:0, buteurs:['Mbappé','Dembélé','Kylian Mbappé','Ousmane Dembélé'], phase:'Quart de finale'},
   {id:'m7', label:'Match 7 - FRA/ESP', date:'Mardi 14 juillet 2026 · 21h00', home:'France', away:'Espagne', hShort:'FRA', aShort:'ESP', hFlag:['#002395','#fff','#ED2939'], aFlag:['#AA151B','#F1BF00','#AA151B'], done:true, scoreH:0, scoreA:2, buteurs:[], phase:'Demi-finale'},   
-  {id:'m8', label:'Match 8 - ENG/ARG', date:'Mercredi 15 juillet 2026 · 21h00', home:'Angleterre', away:'Argentine', hShort:'ENG', aShort:'ARG', hFlag:['#fff','#CE1124','#fff'], aFlag:['#75AADB','#fff','#75AADB'], done:false, phase:'Demi-finale'}
-];
+  {id:'m8', label:'Match 8 - ENG/ARG', date:'Mercredi 15 juillet 2026 · 21h00', home:'Angleterre', away:'Argentine', hShort:'ENG', aShort:'ARG', hFlag:['#fff','#CE1124','#fff'], aFlag:['#75AADB','#fff','#75AADB'], done:false, phase:'Demi-finale', neutral:true},
+  {id:'m9', label:'Match 9 - FRA/???', date:'Petite finale · 3e place', home:'France', away:'À déterminer', hShort:'FRA', aShort:'???', hFlag:['#002395','#fff','#ED2939'], aFlag:['#888','#666','#888'], done:false, phase:'Petite finale (3e place)', pending:true}];
 
 // Pronostics Match 1 issus du PDF — points à 0, calculés par la fonction après saisie résultat
 const MATCH1_DATA = [
