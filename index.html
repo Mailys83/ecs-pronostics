@@ -409,7 +409,13 @@ function renderHero(){
 
 function selectMatch(i){
   curMatch=i;
-  MATCHES.forEach((_,j)=>{const el=document.getElementById('pill-'+j);if(el)el.classList.toggle('active',j===i);});
+  MATCHES.forEach((m,j)=>{
+    const el=document.getElementById('pill-'+j);
+    if(el){
+      el.classList.toggle('active',j===i);
+      if(m.neutral) el.classList.add('neutral-match');
+    }
+  });
   issue='';['V','N','D'].forEach(x=>document.getElementById('ib-'+x).className='issue-btn');
   document.getElementById('score-h').value='';
   document.getElementById('score-a').value='';
