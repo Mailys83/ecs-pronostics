@@ -398,7 +398,7 @@ function renderHero(){
     rb.innerHTML=`<div class="result-banner">
       <div class="result-banner-top">Résultat officiel</div>
       <div class="result-banner-score">${m.scoreH} – ${m.scoreA}</div>
-      <div class="result-banner-teams">France vs ${m.away}</div>
+      <div class="result-banner-teams">${m.home} vs ${m.away}</div>
       <div class="result-banner-buteurs">⚽ Buteurs : ${m.buteurs.slice(0,2).join(', ')}</div>
     </div>`;
     cn.innerHTML='<div class="closed-notice">🔒 Les pronostics pour ce match sont fermés.</div>';
