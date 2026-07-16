@@ -235,8 +235,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--fond);color:var(--texte);
     </div>
     <div class="match-pill" onclick="selectMatch(8)" id="pill-8">
       <span class="match-pill-num">3e place</span>
-      <span class="match-pill-teams">FRA – ?</span>
-      <span class="match-pill-date">à venir</span>
+      <span class="match-pill-teams">FRA – ENG</span>
+      <span class="match-pill-date">18 juillet</span>
     </div>
   </div>
 </div>
@@ -330,8 +330,8 @@ const MATCHES = [
   {id:'m5', label:'Match 5 - FRA/PAR', date:'Samedi 4 juillet 2026 · 23h00', home:'France', away:'Paraguay', hShort:'FRA', aShort:'PAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#D52B1E','#fff','#0038A8'], done:true, scoreH:1, scoreA:0, buteurs:['Mbappé','Kylian Mbappé']},
   {id:'m6', label:'Match 6 - FRA/MAR', date:'Jeudi 9 juillet 2026 · 22h00', home:'France', away:'Maroc', hShort:'FRA', aShort:'MAR', hFlag:['#002395','#fff','#ED2939'], aFlag:['#C1272D','#006233','#C1272D'], done:true, scoreH:2, scoreA:0, buteurs:['Mbappé','Dembélé','Kylian Mbappé','Ousmane Dembélé'], phase:'Quart de finale'},
   {id:'m7', label:'Match 7 - FRA/ESP', date:'Mardi 14 juillet 2026 · 21h00', home:'France', away:'Espagne', hShort:'FRA', aShort:'ESP', hFlag:['#002395','#fff','#ED2939'], aFlag:['#AA151B','#F1BF00','#AA151B'], done:true, scoreH:0, scoreA:2, buteurs:[], phase:'Demi-finale'},   
-{id:'m8', label:'Match 8 - ENG/ARG', date:'Mercredi 15 juillet 2026 · 21h00', home:'Angleterre', away:'Argentine', hShort:'ENG', aShort:'ARG', hFlag:['#fff','#CE1124','#fff'], aFlag:['#75AADB','#fff','#75AADB'], done:true, scoreH:1, scoreA:2, buteurs:['Gordon','Fernandez','Martinez','Anthony Gordon','Enzo Fernandez','Lautaro Martinez'], phase:'Demi-finale', neutral:true},  {id:'m9', label:'Match 9 - FRA/???', date:'Petite finale · 3e place', home:'France', away:'À déterminer', hShort:'FRA', aShort:'???', hFlag:['#002395','#fff','#ED2939'], aFlag:['#888','#666','#888'], done:false, phase:'Petite finale (3e place)', pending:true}];
-
+{id:'m8', label:'Match 8 - ENG/ARG', date:'Mercredi 15 juillet 2026 · 21h00', home:'Angleterre', away:'Argentine', hShort:'ENG', aShort:'ARG', hFlag:['#fff','#CE1124','#fff'], aFlag:['#75AADB','#fff','#75AADB'], done:true, scoreH:1, scoreA:2, buteurs:['Gordon','Fernandez','Martinez','Anthony Gordon','Enzo Fernandez','Lautaro Martinez'], phase:'Demi-finale', neutral:true}, 
+{id:'m9', label:'Match 9 - FRA/ENG', date:'Samedi 18 juillet 2026 · 23h00', home:'France', away:'Angleterre', hShort:'FRA', aShort:'ENG', hFlag:['#002395','#fff','#ED2939'], aFlag:['#fff','#CE1124','#fff'], done:false, phase:'Petite finale (3e place)'}];
 // Pronostics Match 1 issus du PDF — points à 0, calculés par la fonction après saisie résultat
 const MATCH1_DATA = [
   {nom:'Mkhenini souhayel',    match:'Match 1 - FRA/SEN', score_france:3, score_adversaire:1, buteur_bonus:'Mbappé',                 points:0},
